@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神奇小精靈遊戲冒險系統</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 80vw;
+            max-width: 800px;
+            height: 60vw;
+            max-height: 600px;
+            background: #000;
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #pacman {
+            position: absolute;
+            width: 5vw;
+            height: 5vw;
+            max-width: 40px;
+            max-height: 40px;
+            background-image: url('image/pacman.svg');
+            background-size: cover;
+            transition: transform 0.1s;
+            z-index: 2;
+        }
+
+        .dot {
+            position: absolute;
+            width: 1.5vw;
+            height: 1.5vw;
+            max-width: 12px;
+            max-height: 12px;
+            background: radial-gradient(circle, #fff700, #ffaa00);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .eat-effect {
+            position: absolute;
+            width: 2.5vw;
+            height: 2.5vw;
+            max-width: 20px;
+            max-height: 20px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.8), transparent);
+            border-radius: 50%;
+            animation: eatAnimation 0.5s ease-out forwards;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        @keyframes eatAnimation {
+            0% { transform: scale(0.1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .ghost {
+            position: absolute;
+            width: 5vw;
+            height: 5vw;
+            max-width: 40px;
+            max-height: 40px;
+            background: url('image/ghost.svg');
+            background-size: cover;
+            transition: left 0.1s, top 0.1s;
+            z-index: 2;
+        }
+
+        #game-message {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(24px, 6vw, 48px);
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2vw 4vw;
+            border-radius: 10px;
+            display: none;
+            z-index: 10;
+            text-align: center;
+            background: linear-gradient(to right, #ff0000, #ff9900, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            box-shadow: 
+                0 0 10px rgba(255, 0, 0, 0.8),
+                0 0 20px rgba(255, 165, 0, 0.8),
+                0 0 30px rgba(255, 255, 0, 0.8),
+                0 0 40px rgba(0, 255, 0, 0.8),
+                0 0 50px rgba(0, 255, 255, 0.8),
+                0 0 60px rgba(0, 0, 255, 0.8),
+                0 0 70px rgba(255, 0, 255, 0.8);
+            line-height: 1.2;
+        }
+
+        #game-message.failure {
+            color: #ff4444;
+            background: none;
+            -webkit-background-clip: initial;
+            background-clip: initial;
+            box-shadow: none;
+        }
+
+        #start-btn, #restart-btn, #next-level-btn {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 1vw 2vw;
+            border: none;
+            border-radius: 5px;
+            font-size: clamp(14px, 2.5vw, 18px);
+            font-weight: bold;
+            color: #000;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 10;
+        }
+
+        #start-btn {
+            display: block;
+            background-color: #00ffff;
+        }
+
+        #start-btn:hover {
+            background-color: #00cccc;
+        }
+
+        #restart-btn {
+            background-color: #ffd700;
+        }
+
+        #restart-btn:hover {
+            background-color: #ffaa00;
+        }
+
+        #next-level-btn {
+            background-color: #00ff00;
+        }
+
+        #next-level-btn:hover {
+            background-color: #00cc00;
+        }
+
+        #header {
+            text-align: center;
+            margin-bottom: 1vw;
+            width: 80vw;
+            max-width: 800px;
+        }
+
+        #title {
+            color: #ffd700;
+            font-size: clamp(20px, 4vw, 32px);
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 1vw;
+            margin-top: 0.5vw;
+        }
+
+        #play-pause {
+            width: 4vw;
+            height: 4vw;
+            max-width: 30px;
+            max-height: 30px;
+            background-color: transparent;
+            border: 2px solid #ffd700;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: clamp(12px, 2vw, 16px);
+            color: #ffd700;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #play-pause:hover {
+            background-color: rgba(255, 215, 0, 0.2);
+        }
+
+        #volume {
+            width: 10vw;
+            max-width: 80px;
+            accent-color: #ffd700;
+        }
+
+        #game-stats {
+            margin-top: 0.5vw;
+            text-align: center;
+        }
+
+        #stats-row {
+            font-size: clamp(14px, 2.5vw, 20px);
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .stat-item.score { color: #ffd700; }
+        .stat-item.level { color: #00ff00; }
+        .stat-item.timer { color: #ff4444; }
+
+        #instructions {
+            color: #ffffff;
+            font-size: clamp(12px, 2vw, 16px);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3vw 1vw;
+            border-radius: 10px;
+            white-space: nowrap;
+            display: none;
+            margin-top: 0.5vw;
+            text-align: center;
+        }
+
+        #instructions span {
+            font-weight: bold;
+        }
+        .ghost-count { color: #ff77ff; }
+        .ghost-speed { color: #ff9999; }
+        .time-limit { color: #99ccff; }
+        .dot-goal { color: #ff99cc; }
+
+        #copyright {
+            color: #ffd700;
+            margin-top: 2vw;
+            font-size: clamp(12px, 2vw, 16px);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 虛擬搖桿樣式 */
+        #joystick-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin-top: 1vw;
+            display: none; /* 初始隱藏 */
+        }
+
+        #joystick-base {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 215, 0, 0.3);
+            border-radius: 50%;
+            border: 2px solid #ffd700;
+        }
+
+        #joystick {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #ffd700;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+        }
+
+        @media (max-width: 600px) {
+            #game-container { width: 90vw; height: 67.5vw; }
+            #pacman, .ghost { width: 6vw; height: 6vw; }
+            .dot { width: 2vw; height: 2vw; }
+            #start-btn, #restart-btn, #next-level-btn { padding: 2vw 4vw; }
+            #stats-row { font-size: clamp(12px, 2vw, 16px); }
+            #instructions { font-size: clamp(10px, 1.8vw, 14px); }
+            #joystick-container { width: 100px; height: 100px; }
+            #joystick { width: 30px; height: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div id="title">神奇小精靈遊戲冒險系統</div>
+        <div id="controls">
+            <button id="play-pause">▶</button>
+            <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+        </div>
+        <div id="game-stats">
+            <div id="stats-row">
+                <span class="stat-item score" id="score-display">🌟 累積分數: 0</span>｜
+                <span class="stat-item level" id="level-display">⚔️ 目前關卡: 1</span>｜
+                <span class="stat-item timer" id="timer-display">⏱️ 剩餘時間: 20秒</span>
+            </div>
+            <div id="instructions">關卡情境：惡魔<span class="ghost-count">2</span>個，速度<span class="ghost-speed">3.5</span>｜過關條件：在<span class="time-limit">20</span>秒內吃完<span class="dot-goal">10</span>個食物點</div>
+        </div>
+    </div>
+    <div id="game-container">
+        <div id="pacman"></div>
+        <div id="game-message"></div>
+        <button id="start-btn">開始遊戲</button>
+        <button id="restart-btn">再試一次</button>
+        <button id="next-level-btn">進入下一關</button>
+    </div>
+    <div id="joystick-container">
+        <div id="joystick-base"></div>
+        <div id="joystick"></div>
+    </div>
+    <div id="copyright">Copyright © Liyuchiutiger Gongminshen</div>
+    <audio id="background-music" loop>
+        <source src="music/background.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const PACMAN_SPEED = 5;
+        const BASE_TIME = 20;
+        const TOTAL_DOTS = 30;
+        const BASE_DOTS_TO_WIN = 10;
+        const GHOST_BASE_SPEED = 3.5;
+        const MAX_LEVEL = 15;
+        const JOYSTICK_RADIUS = 60; // 搖桿底座半徑（桌面版）
+
+        const gameContainer = document.getElementById('game-container');
+        const pacman = document.getElementById('pacman');
+        const scoreDisplay = document.getElementById('score-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const levelDisplay = document.getElementById('level-display');
+        const instructions = document.getElementById('instructions');
+        const gameMessage = document.getElementById('game-message');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const audio = document.getElementById('background-music');
+        const playPauseBtn = document.getElementById('play-pause');
+        const volumeControl = document.getElementById('volume');
+        const joystickContainer = document.getElementById('joystick-container');
+        const joystick = document.getElementById('joystick');
+
+        class Game {
+            constructor() {
+                this.score = 0;
+                this.level = 1;
+                this.timeLeft = BASE_TIME;
+                this.gameActive = false;
+                this.pacmanX = 0;
+                this.pacmanY = 0;
+                this.ghosts = [];
+                this.ghostStates = [];
+                this.dotsToWin = BASE_DOTS_TO_WIN;
+                this.touchDeltaX = 0;
+                this.touchDeltaY = 0;
+                this.mouseDown = false;
+                this.mouseTargetX = 0;
+                this.mouseTargetY = 0;
+                this.joystickActive = false;
+                this.joystickDeltaX = 0;
+                this.joystickDeltaY = 0;
+            }
+
+            getContainerDimensions() {
+                return { width: gameContainer.offsetWidth, height: gameContainer.offsetHeight };
+            }
+
+            setInitialPositions() {
+                const { width, height } = this.getContainerDimensions();
+                this.pacmanX = 0;
+                this.pacmanY = 0;
+                pacman.style.left = `${this.pacmanX}px`;
+                pacman.style.top = `${this.pacmanY}px`;
+
+                this.ghosts.forEach(ghost => ghost.remove());
+                this.ghosts = [];
+                this.ghostStates = [];
+
+                const ghostCount = Math.min(2 + Math.floor(this.level / 2), 5);
+                for (let i = 0; i < ghostCount; i++) {
+                    const ghost = document.createElement('div');
+                    ghost.className = 'ghost';
+                    gameContainer.appendChild(ghost);
+                    this.ghosts.push(ghost);
+                    const x = Math.min(width / 2 + (i * 50), width - 40);
+                    const y = Math.min(height / 2 + (i * 50), height - 40);
+                    this.ghostStates.push({ x, y });
+                    ghost.style.left = `${x}px`;
+                    ghost.style.top = `${y}px`;
+                }
+            }
+
+            createDots() {
+                const { width, height } = this.getContainerDimensions();
+                document.querySelectorAll('.dot').forEach(dot => dot.remove());
+                for (let i = 0; i < TOTAL_DOTS; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    dot.style.left = `${Math.random() * (width - 12)}px`;
+                    dot.style.top = `${Math.random() * (height - 12)}px`;
+                    gameContainer.appendChild(dot);
+                }
+            }
+
+            createEatEffect(x, y) {
+                const effect = document.createElement('div');
+                effect.className = 'eat-effect';
+                effect.style.left = `${x}px`;
+                effect.style.top = `${y}px`;
+                gameContainer.appendChild(effect);
+                setTimeout(() => effect.remove(), 500);
+            }
+
+            updateInstructions() {
+                const ghostCount = Math.min(2 + Math.floor(this.level / 2), 5);
+                const ghostSpeed = (GHOST_BASE_SPEED + this.level * 0.5).toFixed(1);
+                instructions.innerHTML = `關卡情境：惡魔<span class="ghost-count">${ghostCount}</span>個，速度<span class="ghost-speed">${ghostSpeed}</span>｜過關條件：在<span class="time-limit">${this.timeLeft}</span>秒內吃完<span class="dot-goal">${this.dotsToWin}</span>個食物點`;
+                instructions.style.display = 'block';
+            }
+
+            checkCollision() {
+                if (!this.gameActive) return;
+
+                const pacmanRect = pacman.getBoundingClientRect();
+                document.querySelectorAll('.dot').forEach(dot => {
+                    const dotRect = dot.getBoundingClientRect();
+                    if (pacmanRect.left < dotRect.right && pacmanRect.right > dotRect.left &&
+                        pacmanRect.top < dotRect.bottom && pacmanRect.bottom > dotRect.top) {
+                        const dotX = parseFloat(dot.style.left) + 6;
+                        const dotY = parseFloat(dot.style.top) + 6;
+                        this.createEatEffect(dotX - 10, dotY - 10);
+                        dot.remove();
+                        this.score += 10;
+                        scoreDisplay.textContent = `🌟 累積分數：${this.score}`;
+                        if (this.score >= this.dotsToWin * 10) {
+                            this.end(true);
+                        }
+                    }
+                });
+
+                this.ghosts.forEach(ghost => {
+                    const ghostRect = ghost.getBoundingClientRect();
+                    if (pacmanRect.left < ghostRect.right && pacmanRect.right > ghostRect.left &&
+                        pacmanRect.top < ghostRect.bottom && pacmanRect.bottom > ghostRect.top) {
+                        this.end(false);
+                    }
+                });
+            }
+
+            movePacman(direction) {
+                if (!this.gameActive) return;
+                const { width, height } = this.getContainerDimensions();
+                const pacmanSize = pacman.offsetWidth;
+
+                switch (direction) {
+                    case 'ArrowUp':
+                        if (this.pacmanY > 0) this.pacmanY -= PACMAN_SPEED;
+                        pacman.style.transform = 'rotate(-90deg)';
+                        break;
+                    case 'ArrowDown':
+                        if (this.pacmanY < height - pacmanSize) this.pacmanY += PACMAN_SPEED;
+                        pacman.style.transform = 'rotate(90deg)';
+                        break;
+                    case 'ArrowLeft':
+                        if (this.pacmanX > 0) this.pacmanX -= PACMAN_SPEED;
+                        pacman.style.transform = 'rotate(180deg)';
+                        break;
+                    case 'ArrowRight':
+                        if (this.pacmanX < width - pacmanSize) this.pacmanX += PACMAN_SPEED;
+                        pacman.style.transform = 'rotate(0deg)';
+                        break;
+                }
+                pacman.style.left = `${this.pacmanX}px`;
+                pacman.style.top = `${this.pacmanY}px`;
+                this.checkCollision();
+            }
+
+            moveGhost(index) {
+                if (!this.gameActive) return;
+                const ghost = this.ghosts[index];
+                const ghostState = this.ghostStates[index];
+                const ghostSpeed = GHOST_BASE_SPEED + this.level * 0.5;
+                const { width, height } = this.getContainerDimensions();
+                const ghostSize = ghost.offsetWidth;
+
+                if (!ghost.directionCooldown || ghost.directionCooldown <= 0) {
+                    ghost.direction = Math.floor(Math.random() * 4);
+                    ghost.directionCooldown = 30;
+                } else {
+                    ghost.directionCooldown--;
+                }
+
+                switch (ghost.direction) {
+                    case 0:
+                        if (ghostState.y > 0) ghostState.y -= ghostSpeed;
+                        break;
+                    case 1:
+                        if (ghostState.y < height - ghostSize) ghostState.y += ghostSpeed;
+                        break;
+                    case 2:
+                        if (ghostState.x > 0) ghostState.x -= ghostSpeed;
+                        break;
+                    case 3:
+                        if (ghostState.x < width - ghostSize) ghostState.x += ghostSpeed;
+                        break;
+                }
+
+                ghost.style.left = `${ghostState.x}px`;
+                ghost.style.top = `${ghostState.y}px`;
+                this.checkCollision();
+                requestAnimationFrame(() => this.moveGhost(index));
+            }
+
+            updatePacmanPosition(timestamp) {
+                if (!this.gameActive) return;
+
+                const { width, height } = this.getContainerDimensions();
+                const pacmanSize = pacman.offsetWidth;
+
+                // 觸控移動（遊戲畫面內）
+                if (this.touchDeltaX !== 0 || this.touchDeltaY !== 0) {
+                    if (Math.abs(this.touchDeltaX) > Math.abs(this.touchDeltaY)) {
+                        if (this.touchDeltaX > 0 && this.pacmanX < width - pacmanSize) {
+                            this.pacmanX += PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(0deg)';
+                        } else if (this.touchDeltaX < 0 && this.pacmanX > 0) {
+                            this.pacmanX -= PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(180deg)';
+                        }
+                    } else {
+                        if (this.touchDeltaY > 0 && this.pacmanY < height - pacmanSize) {
+                            this.pacmanY += PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(90deg)';
+                        } else if (this.touchDeltaY < 0 && this.pacmanY > 0) {
+                            this.pacmanY -= PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(-90deg)';
+                        }
+                    }
+                }
+
+                // 搖桿移動
+                if (this.joystickActive) {
+                    const magnitude = Math.sqrt(this.joystickDeltaX * this.joystickDeltaX + this.joystickDeltaY * this.joystickDeltaY);
+                    if (magnitude > 5) { // 避免過小的移動
+                        if (Math.abs(this.joystickDeltaX) > Math.abs(this.joystickDeltaY)) {
+                            if (this.joystickDeltaX > 0 && this.pacmanX < width - pacmanSize) {
+                                this.pacmanX += PACMAN_SPEED;
+                                pacman.style.transform = 'rotate(0deg)';
+                            } else if (this.joystickDeltaX < 0 && this.pacmanX > 0) {
+                                this.pacmanX -= PACMAN_SPEED;
+                                pacman.style.transform = 'rotate(180deg)';
+                            }
+                        } else {
+                            if (this.joystickDeltaY > 0 && this.pacmanY < height - pacmanSize) {
+                                this.pacmanY += PACMAN_SPEED;
+                                pacman.style.transform = 'rotate(90deg)';
+                            } else if (this.joystickDeltaY < 0 && this.pacmanY > 0) {
+                                this.pacmanY -= PACMAN_SPEED;
+                                pacman.style.transform = 'rotate(-90deg)';
+                            }
+                        }
+                    }
+                }
+
+                // 滑鼠移動
+                if (this.mouseDown) {
+                    const dx = this.mouseTargetX - this.pacmanX;
+                    const dy = this.mouseTargetY - this.pacmanY;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        if (dx > 0 && this.pacmanX < width - pacmanSize) {
+                            this.pacmanX += PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(0deg)';
+                        } else if (dx < 0 && this.pacmanX > 0) {
+                            this.pacmanX -= PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(180deg)';
+                        }
+                    } else {
+                        if (dy > 0 && this.pacmanY < height - pacmanSize) {
+                            this.pacmanY += PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(90deg)';
+                        } else if (dy < 0 && this.pacmanY > 0) {
+                            this.pacmanY -= PACMAN_SPEED;
+                            pacman.style.transform = 'rotate(-90deg)';
+                        }
+                    }
+                }
+
+                pacman.style.left = `${this.pacmanX}px`;
+                pacman.style.top = `${this.pacmanY}px`;
+                this.checkCollision();
+
+                requestAnimationFrame((ts) => this.updatePacmanPosition(ts));
+            }
+
+            startGhosts() {
+                this.ghosts.forEach((ghost, index) => {
+                    ghost.direction = Math.floor(Math.random() * 4);
+                    ghost.directionCooldown = 30;
+                    this.moveGhost(index);
+                });
+            }
+
+            startTimer() {
+                let lastTime = performance.now();
+                const updateTimer = (currentTime) => {
+                    if (!this.gameActive) return;
+                    const delta = (currentTime - lastTime) / 1000;
+                    if (delta >= 1) {
+                        this.timeLeft--;
+                        timerDisplay.textContent = `⏱️ 剩餘時間: ${this.timeLeft}秒`;
+                        lastTime = currentTime;
+                        if (this.timeLeft <= 0) this.end(false);
+                    }
+                    requestAnimationFrame(updateTimer);
+                };
+                requestAnimationFrame(updateTimer);
+            }
+
+            end(isWin) {
+                this.gameActive = false;
+                joystickContainer.style.display = 'none'; // 遊戲結束時隱藏搖桿
+                gameMessage.style.display = 'block';
+                if (isWin) {
+                    if (this.level === MAX_LEVEL) {
+                        gameMessage.innerHTML = `<div>You R</div><div>神爆小精靈</div>`;
+                        gameMessage.style.textAlign = 'center';
+                        gameMessage.classList.remove('failure');
+                        restartBtn.style.display = 'block';
+                    } else {
+                        gameMessage.innerHTML = `恭喜通過<br>第${this.level}關`;
+                        gameMessage.classList.remove('failure');
+                        nextLevelBtn.style.display = 'block';
+                    }
+                } else {
+                    gameMessage.textContent = '再試一次';
+                    gameMessage.classList.add('failure');
+                    restartBtn.style.display = 'block';
+                }
+            }
+
+            nextLevel() {
+                if (this.level >= MAX_LEVEL) return;
+
+                this.level++;
+                this.timeLeft = BASE_TIME - (this.level - 1);
+                this.dotsToWin = BASE_DOTS_TO_WIN + (this.level - 1);
+                this.score = 0;
+                scoreDisplay.textContent = `🌟 累積分數：${this.score}`;
+                timerDisplay.textContent = `⏱️ 剩餘時間：${this.timeLeft}秒`;
+                levelDisplay.textContent = `⚔️ 目前關卡：${this.level}`;
+                this.updateInstructions();
+                gameMessage.style.display = 'none';
+                nextLevelBtn.style.display = 'none';
+                this.gameActive = true;
+                this.setInitialPositions();
+                this.createDots();
+                this.startTimer();
+                this.startGhosts();
+                joystickContainer.style.display = 'block'; // 顯示搖桿
+                requestAnimationFrame((ts) => this.updatePacmanPosition(ts));
+            }
+
+            restart() {
+                this.gameActive = true;
+                this.score = 0;
+                this.timeLeft = BASE_TIME - (this.level - 1);
+                this.setInitialPositions();
+                pacman.style.transform = 'rotate(0deg)';
+                scoreDisplay.textContent = `🌟 累積分數：${this.score}`;
+                timerDisplay.textContent = `⏱️ 剩餘時間：${this.timeLeft}秒`;
+                levelDisplay.textContent = `⚔️ 目前關卡：${this.level}`;
+                this.updateInstructions();
+                gameMessage.style.display = 'none';
+                restartBtn.style.display = 'none';
+                this.createDots();
+                this.startTimer();
+                this.startGhosts();
+                joystickContainer.style.display = 'block'; // 顯示搖桿
+                requestAnimationFrame((ts) => this.updatePacmanPosition(ts));
+            }
+
+            start() {
+                this.gameActive = true;
+                this.setInitialPositions();
+                this.createDots();
+                this.startTimer();
+                this.startGhosts();
+                levelDisplay.textContent = `⚔️ 目前關卡：${this.level}`;
+                scoreDisplay.textContent = `🌟 累積分數：${this.score}`;
+                timerDisplay.textContent = `⏱️ 剩餘時間：${this.timeLeft}秒`;
+                this.updateInstructions();
+                joystickContainer.style.display = 'block'; // 啟動遊戲時顯示搖桿
+                requestAnimationFrame((ts) => this.updatePacmanPosition(ts));
+                startBtn.style.display = 'none';
+            }
+        }
+
+        const game = new Game();
+
+        // 鍵盤控制
+        document.addEventListener('keydown', e => game.movePacman(e.key));
+
+        // 遊戲畫面觸控控制
+        let touchStartX = 0, touchStartY = 0;
+        gameContainer.addEventListener('touchstart', e => {
+            if (!game.gameActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        });
+
+        gameContainer.addEventListener('touchmove', e => {
+            if (!game.gameActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            game.touchDeltaX = deltaX;
+            game.touchDeltaY = deltaY;
+
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        });
+
+        gameContainer.addEventListener('touchend', () => {
+            game.touchDeltaX = 0;
+            game.touchDeltaY = 0;
+        });
+
+        // 滑鼠控制
+        gameContainer.addEventListener('mousedown', e => {
+            if (!game.gameActive) return;
+            const rect = gameContainer.getBoundingClientRect();
+            game.mouseTargetX = e.clientX - rect.left - pacman.offsetWidth / 2;
+            game.mouseTargetY = e.clientY - rect.top - pacman.offsetHeight / 2;
+            game.mouseDown = true;
+        });
+
+        document.addEventListener('mouseup', () => {
+            game.mouseDown = false;
+        });
+
+        gameContainer.addEventListener('mousemove', e => {
+            if (!game.gameActive || !game.mouseDown) return;
+            const rect = gameContainer.getBoundingClientRect();
+            game.mouseTargetX = e.clientX - rect.left - pacman.offsetWidth / 2;
+            game.mouseTargetY = e.clientY - rect.top - pacman.offsetHeight / 2;
+        });
+
+        // 搖桿控制
+        let joystickStartX = 0, joystickStartY = 0;
+        const joystickRadius = window.innerWidth <= 600 ? 50 : JOYSTICK_RADIUS; // 手機版半徑50，桌面版60
+
+        joystick.addEventListener('touchstart', e => {
+            if (!game.gameActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            joystickStartX = touch.clientX;
+            joystickStartY = touch.clientY;
+            game.joystickActive = true;
+        });
+
+        joystick.addEventListener('touchmove', e => {
+            if (!game.gameActive || !game.joystickActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            let deltaX = touch.clientX - joystickStartX;
+            let deltaY = touch.clientY - joystickStartY;
+
+            // 限制搖桿移動範圍在底座內
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (distance > joystickRadius) {
+                const angle = Math.atan2(deltaY, deltaX);
+                deltaX = joystickRadius * Math.cos(angle);
+                deltaY = joystickRadius * Math.sin(angle);
+            }
+
+            joystick.style.left = `calc(50% + ${deltaX}px)`;
+            joystick.style.top = `calc(50% + ${deltaY}px)`;
+
+            game.joystickDeltaX = deltaX;
+            game.joystickDeltaY = deltaY;
+        });
+
+        joystick.addEventListener('touchend', () => {
+            game.joystickActive = false;
+            game.joystickDeltaX = 0;
+            game.joystickDeltaY = 0;
+            joystick.style.left = '50%';
+            joystick.style.top = '50%';
+        });
+
+        // 按鈕事件
+        startBtn.addEventListener('click', () => game.start());
+        restartBtn.addEventListener('click', () => game.restart());
+        nextLevelBtn.addEventListener('click', () => game.nextLevel());
+
+        // 音樂控制
+        audio.volume = 1;
+        playPauseBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.textContent = '⏸';
+            } else {
+                audio.pause();
+                playPauseBtn.textContent = '▶';
+            }
+        });
+        volumeControl.addEventListener('input', e => audio.volume = e.target.value);
+
+        // 視窗調整處理
+        window.addEventListener('resize', () => {
+            if (game.gameActive) {
+                const { width, height } = game.getContainerDimensions();
+                game.pacmanX = Math.min(game.pacmanX, width - pacman.offsetWidth);
+                game.pacmanY = Math.min(game.pacmanY, height - pacman.offsetHeight);
+                pacman.style.left = `${game.pacmanX}px`;
+                pacman.style.top = `${game.pacmanY}px`;
+                game.ghostStates.forEach((state, index) => {
+                    state.x = Math.min(state.x, width - game.ghosts[index].offsetWidth);
+                    state.y = Math.min(state.y, height - game.ghosts[index].offsetHeight);
+                    game.ghosts[index].style.left = `${state.x}px`;
+                    game.ghosts[index].style.top = `${state.y}px`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
